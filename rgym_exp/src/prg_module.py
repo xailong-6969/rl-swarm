@@ -85,7 +85,7 @@ class PRGModule:
 
                     # only update if we successfully played this round
                     self._prg_history_dict[current_game] = results_dict["clue_idx"]
-                    log_str = f'Game {current_game} Round {results_dict["clue_idx"]}: Agent {peer_id} placed bet of {bet_amt / 1e18:.2f} tokens on choice - {results_dict["choice"]}\n'
+                    log_str = f'Game {current_game} Round {results_dict["clue_idx"]}: Peer {peer_id} placed bet of {bet_amt / 1e18:.2f} tokens on choice - {results_dict["choice"]}\n'
                     get_logger().info(log_str)
                     with open(self.prg_record, 'a') as f:
                         f.write(log_str)
