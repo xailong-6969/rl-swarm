@@ -54,29 +54,6 @@ class JudgeClient:
         except Exception as e:
             self.logger.debug(f"Failed to request question: {e}")
             return None
-    
-    def get_current_clue(self) -> Optional[Dict[str, Any]]:
-        """
-        Get the current clue from the judge service.
-        
-        Returns:
-            Dictionary containing clue data or None if request failed
-        """
-        try:
-            response = requests.get(f"{self.base_url}/current_clue/")
-            
-            if response.status_code == 200:
-                result = response.json()
-                self.logger.debug(f'Received clue: {result["clue"]}')
-                return result
-            else:
-                self.logger.debug(f"Failed to receive clue: {response.status_code}")
-                return None
-                
-        except Exception as e:
-            self.logger.debug(f"Failed to get current clue: {e}")
-            return None
-        
 
     def submit_answer(self, session_id: str, round_number: int, user_answer: str) -> Optional[Dict[str, Any]]:
         """

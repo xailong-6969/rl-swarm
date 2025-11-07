@@ -33,6 +33,8 @@ services:
       dockerfile: containerfiles/swarm-node/swarm.containerfile
       args:
         - BASE_IMAGE=ubuntu:24.04
+    depends_on:
+      - ollama
     ports:
       - 3000:3000
     volumes:
@@ -43,6 +45,7 @@ services:
     environment:
       - HF_TOKEN=${HF_TOKEN}
       - GENSYN_RESET_CONFIG=${GENSYN_RESET_CONFIG}
+      - OLLAMA_HOST=http://ollama:11434
 
   # Requires the NVIDIA Drivers version >=525.60.13 to be installed, as well
   # as the nvidia-container-toolkit.
@@ -56,6 +59,8 @@ services:
       dockerfile: containerfiles/swarm-node/swarm.containerfile
       args:
         - BASE_IMAGE=nvidia/cuda:12.6.3-cudnn-devel-ubuntu24.04
+    depends_on:
+      - ollama
     ports:
       - 3000:3000
     volumes:
@@ -66,6 +71,7 @@ services:
     environment:
       - HF_TOKEN=${HF_TOKEN}
       - GENSYN_RESET_CONFIG=${GENSYN_RESET_CONFIG}
+      - OLLAMA_HOST=http://ollama:11434
     deploy:
       resources:
         reservations:
@@ -73,3 +79,9 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+  ollama:
+    image: ollama/ollama:0.11.10
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama-data:/root/.ollama

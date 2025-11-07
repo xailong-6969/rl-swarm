@@ -2,8 +2,9 @@ import os
 import time
 from collections import defaultdict
 
+import ollama
+
 from genrl.blockchain import SwarmCoordinator
-from genrl.communication import Communication
 from genrl.communication.hivemind.hivemind_backend import HivemindBackend
 from genrl.data import DataManager
 from genrl.game import BaseGameManager
@@ -16,8 +17,7 @@ from genrl.state import GameState
 from genrl.trainer import TrainerModule
 from huggingface_hub import login, whoami
 
-from rgym_exp.src.utils.name_utils import get_name_from_peer_id
-from rgym_exp.src.prg_module import PRGModule
+from code_gen_exp.src.utils.name_utils import get_name_from_peer_id
 
 
 class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
@@ -32,7 +32,7 @@ class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
         reward_manager: RewardManager,
         trainer: TrainerModule,
         data_manager: DataManager,
-        communication: Communication,
+        communication_kwargs: dict,
         role_manager: RoleManager | None = None,
         run_mode: str = "train",
         log_dir: str = "logs",
@@ -40,6 +40,12 @@ class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
         hf_push_frequency: int = 20,
         **kwargs,
     ):
+        initial_peers = coordinator.get_bootnodes()
+        communication_kwargs['initial_peers'] = initial_peers
+        get_logger().info(f"bootnodes: {initial_peers}")
+        rewards_ollama_model = kwargs.get("rewards_ollama_model", 'qwen2.5-coder:1.5b-instruct')
+
+        communication = HivemindBackend(**communication_kwargs)
 
         super().__init__(
             max_stage=max_stage,
@@ -71,6 +77,8 @@ class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
             self.state.round
         )  # initialize communication module to contract's round
 
+        self.data_manager.initialize(self.communication)
+
         # enable push to HF if token was provided
         self.hf_token = hf_token
         if self.hf_token not in [None, "None"]:
@@ -79,8 +87,16 @@ class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
         get_logger().info(
             f"🐱 Hello 🐈 [{get_name_from_peer_id(self.peer_id)}] 🦮 [{self.peer_id}]!"
         )
-        get_logger().info(f"bootnodes: {kwargs.get('bootnodes', [])}")
         get_logger().info(f"Using Model: {self.trainer.model.config.name_or_path}")
+
+        try:
+            models = ollama.list()
+            model_names = [model["model"] for model in models["models"]]
+            if rewards_ollama_model not in model_names:
+                ollama.pull(rewards_ollama_model)
+        except Exception as e:
+            get_logger().error(f"Error pulling model from ollama: {rewards_ollama_model}")
+            raise e
 
         with open(os.path.join(log_dir, f"system_info.txt"), "w") as f:
             f.write(get_system_info())
@@ -89,10 +105,6 @@ class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
         self.time_since_submit = time.time()  # seconds
         self.submit_period = 3.0  # hours
         self.submitted_this_round = False
-
-        # PRG Game
-        self.prg_module = PRGModule(log_dir, **kwargs)
-        self.prg_game = self.prg_module.prg_game
 
     def _get_total_rewards_by_agent(self):
         rewards_by_agent = defaultdict(int)
@@ -145,32 +157,28 @@ class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
             signal_by_agent = self._get_total_rewards_by_agent()
             self.batched_signals += self._get_my_rewards(signal_by_agent)
         except Exception as e:
-            # If signal_by_agent is empty, we just submit ourself as winner according to logic in _try_submit_to_chain
             get_logger().debug(f"Error getting total rewards by agent: {e}")
             signal_by_agent = {}
+
         self._try_submit_to_chain(signal_by_agent)
 
-    def _hook_after_round_advanced(self):
-        try:
-            if self.prg_game:
-                # TODO: Ideally I think the judge client request question bit should come in the manager and the trainer should be doing only PyTorch-y stuff, 
-                # but I have kept it consistent with the evaluate function for now.
-                prg_history_dict = self.prg_module.prg_history_dict
-                results_dict = self.trainer.play_prg_game_logits(prg_history_dict)
-                self.prg_module.play_prg_game(results_dict, self.peer_id)
-        except Exception as e:
-            get_logger().info(f"Error playing PRG game, continuing with the next round")
+        for stage in range(self.state.stage):
+            root_state = self.state.get_stage_state(stage)
+            self.data_manager.send_response(self.rewards[stage], root_state)
 
+    def _hook_after_round_advanced(self):
         self._save_to_hf()
 
         # Try to submit to chain again if necessary, but don't update our signal twice
         if not self.submitted_this_round:
-            try:
+            try:    
                 signal_by_agent = self._get_total_rewards_by_agent()
             except Exception as e:
                 get_logger().debug(f"Error getting total rewards by agent: {e}")
                 signal_by_agent = {}
+
             self._try_submit_to_chain(signal_by_agent)
+
 
         # Reset flag for next round
         self.submitted_this_round = False
@@ -228,7 +236,10 @@ class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
         )
         while time.monotonic() - start_time < self.train_timeout:
             curr_time = time.monotonic()
-            _ = self.communication.dht.get_visible_maddrs(latest=True)
+            try:
+                _ = self.communication.dht.get_visible_maddrs(latest=True)
+            except Exception as e:
+                get_logger().debug(f"Unable to refresh DHT visible addrs: {e}")
 
             # Retrieve current round and stage.
             try:

@@ -5,18 +5,13 @@ set -euo pipefail
 # General arguments
 ROOT=$PWD
 
-# GenRL Swarm version to use
-GENRL_TAG="0.1.11"
-
 export IDENTITY_PATH
 export GENSYN_RESET_CONFIG
 export CONNECT_TO_TESTNET=true
 export ORG_ID
 export HF_HUB_DOWNLOAD_TIMEOUT=120  # 2 minutes
-export SWARM_CONTRACT="0xFaD7C5e93f28257429569B854151A1B8DCD404c2"
-export PRG_CONTRACT="0x51D4db531ae706a6eC732458825465058fA23a35"
+export SWARM_CONTRACT="0x7745a8FE4b8D2D2c3BB103F8dCae822746F35Da0"
 export HUGGINGFACE_ACCESS_TOKEN="None"
-export PRG_GAME=true
 
 # Path to an RSA private key. If this path does not exist, a new key pair will be created.
 # Remove this file if you want a new PeerID.
@@ -138,12 +133,10 @@ if [ "$CONNECT_TO_TESTNET" = true ]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS version
         sed -i '' "3s/.*/SWARM_CONTRACT_ADDRESS=$SWARM_CONTRACT/" "$ENV_FILE"
-        sed -i '' "4s/.*/PRG_CONTRACT_ADDRESS=$PRG_CONTRACT/" "$ENV_FILE"
 
     else
         # Linux version
         sed -i "3s/.*/SWARM_CONTRACT_ADDRESS=$SWARM_CONTRACT/" "$ENV_FILE"
-        sed -i "4s/.*/PRG_CONTRACT_ADDRESS=$PRG_CONTRACT/" "$ENV_FILE"
     fi
 
 
@@ -198,29 +191,52 @@ fi
 echo_green ">> Getting requirements..."
 pip install --upgrade pip
 
- echo_green ">> Installing GenRL..."
-pip install gensyn-genrl==${GENRL_TAG}
-pip install reasoning-gym>=0.1.20 # for reasoning gym env
-pip install hivemind@git+https://github.com/gensyn-ai/hivemind@639c964a8019de63135a2594663b5bec8e5356dd # We need the latest, 1.1.11 is broken
+echo_green ">> Installing GenRL..."
 
+# Ollama already running as part of the docker compose file
+if [ -z "$DOCKER" ]; then
+    echo_green ">> Installing Ollama requires 'sudo' privileges. As an alternative, please use the Docker installation path as described in README.md"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # Install brew if not already installed
+        if ! command -v brew > /dev/null 2>&1; then
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        fi
+        # Install ollama if not already installed
+        if ! command -v ollama > /dev/null 2>&1; then
+            brew install ollama
+        fi
+    else
+        # Install ollama if not already installed
+        if ! command -v ollama > /dev/null 2>&1; then
+            curl -fsSL https://ollama.com/install.sh | sh -s -- -y
+        fi
+    fi
+    # Start ollama server if not already running, check by running ollama list
+    if ! ollama list > /dev/null 2>&1; then
+        echo ">> Starting ollama server..."
+        nohup ollama serve > /tmp/ollama.log 2>&1 &
+    fi
+fi
+
+pip install -r code_gen_exp/requirements.txt
 
 if [ ! -d "$ROOT/configs" ]; then
     mkdir "$ROOT/configs"
 fi  
-if [ -f "$ROOT/configs/rg-swarm.yaml" ]; then
+if [ -f "$ROOT/configs/code-gen-swarm.yaml" ]; then
     # Use cmp -s for a silent comparison. If different, backup and copy.
-    if ! cmp -s "$ROOT/rgym_exp/config/rg-swarm.yaml" "$ROOT/configs/rg-swarm.yaml"; then
+    if ! cmp -s "$ROOT/code_gen_exp/config/code-gen-swarm.yaml" "$ROOT/configs/code-gen-swarm.yaml"; then
         if [ -z "$GENSYN_RESET_CONFIG" ]; then
-            echo_green ">> Found differences in rg-swarm.yaml. If you would like to reset to the default, set GENSYN_RESET_CONFIG to a non-empty value."
+            echo_green ">> Found differences in code-gen-swarm.yaml. If you would like to reset to the default, set GENSYN_RESET_CONFIG to a non-empty value."
         else
-            echo_green ">> Found differences in rg-swarm.yaml. Backing up existing config."
-            mv "$ROOT/configs/rg-swarm.yaml" "$ROOT/configs/rg-swarm.yaml.bak"
-            cp "$ROOT/rgym_exp/config/rg-swarm.yaml" "$ROOT/configs/rg-swarm.yaml"
+            echo_green ">> Found differences in code-gen-swarm.yaml. Backing up existing config."
+            mv "$ROOT/configs/code-gen-swarm.yaml" "$ROOT/configs/code-gen-swarm.yaml.bak"
+            cp "$ROOT/code_gen_exp/config/code-gen-swarm.yaml" "$ROOT/configs/code-gen-swarm.yaml"
         fi
     fi
 else
     # If the config doesn't exist, just copy it.
-    cp "$ROOT/rgym_exp/config/rg-swarm.yaml" "$ROOT/configs/rg-swarm.yaml"
+    cp "$ROOT/code_gen_exp/config/code-gen-swarm.yaml" "$ROOT/configs/code-gen-swarm.yaml"
 fi
 
 if [ -n "$DOCKER" ]; then
@@ -254,21 +270,12 @@ else
     echo_green ">> Using default model from config"
 fi
 
-echo -en $GREEN_TEXT
-read -p ">> Would you like your model to participate in the AI Prediction Market? [Y/n] " yn
-if [ "$yn" = "n" ] || [ "$yn" = "N" ]; then
-    PRG_GAME=false
-    echo_green ">> Playing PRG game: false"
-else
-    echo_green ">> Playing PRG game: true"
-fi
-
 echo -en $RESET_TEXT
 echo_green ">> Good luck in the swarm!"
 echo_blue ">> And remember to star the repo on GitHub! --> https://github.com/gensyn-ai/rl-swarm"
 
-python -m rgym_exp.runner.swarm_launcher \
-    --config-path "$ROOT/rgym_exp/config" \
-    --config-name "rg-swarm.yaml" 
+python -m code_gen_exp.runner.swarm_launcher \
+    --config-path "$ROOT/code_gen_exp/config" \
+    --config-name "code-gen-swarm.yaml" 
 
 wait  # Keep script running until Ctrl+C
