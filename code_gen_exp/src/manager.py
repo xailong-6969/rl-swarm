@@ -85,7 +85,7 @@ class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
             self._configure_hf_hub(hf_push_frequency)
 
         get_logger().info(
-            f"🐱 Hello 🐈 [{get_name_from_peer_id(self.peer_id)}] 🦮 [{self.peer_id}]!"
+            f"🐝 Hello [{get_name_from_peer_id(self.peer_id)}] [{self.peer_id}]!"
         )
         get_logger().info(f"Using Model: {self.trainer.model.config.name_or_path}")
 
