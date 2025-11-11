@@ -269,8 +269,13 @@ if [ -n "$MODEL_NAME" ]; then
 else
     echo_green ">> Using default model from config"
 fi
-#logout to prevent weird env issues
-hf auth logout > /dev/null 2>&1
+#logout to prevent weird env issues, if it fails unset and try again
+if ! hf auth logout > /dev/null 2>&1; then
+    unset HF_TOKEN
+    unset HUGGING_FACE_HUB_TOKEN
+    # if it fails a second time, report stderr
+    hf auth logout > /dev/null 2>&1
+fi
 
 echo -en $RESET_TEXT
 echo_green ">> Good luck in the swarm!"
