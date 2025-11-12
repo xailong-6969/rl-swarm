@@ -54,7 +54,7 @@ OR
     - A100
     - H100
 
-With either configuration, you will need Python >=3.10 (for Mac, you will likely need to upgrade).
+With either configuration, you will need Python >=3.10,<=3.13 (for Mac, you will likely need to upgrade).
 
 ## **Please read before continuing!**
 
