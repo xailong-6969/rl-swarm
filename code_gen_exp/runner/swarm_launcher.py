@@ -13,6 +13,8 @@ from code_gen_exp.src.utils.omega_gpu_resolver import (
     gpu_model_choice_resolver,
 )  # necessary for gpu_model_choice resolver in hydra config
 
+import logging
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 @hydra.main(version_base=None)
 def main(cfg: DictConfig):

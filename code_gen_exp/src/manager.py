@@ -84,6 +84,7 @@ class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
         if self.hf_token not in [None, "None"]:
             self._configure_hf_hub(hf_push_frequency)
 
+        get_logger().info('============ Joining CodeZero Swarm!!!============')
         get_logger().info(
             f"🐝 Hello [{get_name_from_peer_id(self.peer_id)}] [{self.peer_id}]!"
         )

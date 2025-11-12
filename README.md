@@ -7,8 +7,8 @@ RL Swarm is a peer-to-peer system for reinforcement learning. It allows you to t
 > CodeZero extends RL Swarm beyond reasoning and math into **coding tasks**, where models take on distinct roles, *Solvers*, *Proposers*, and *Evaluators*, to enable **collaborative learning** across a decentralized network.
 
 Models (CodeZero):
-   - **Qwen/Qwen2.5-Coder-0.5B-Instruct** — Solver role  
-   - **Qwen/Qwen2.5-Coder-1.5B-Instruct** — Evaluator (frozen)  
+   - **Qwen2.5-Coder-0.5B-Instruct** — Solver role  
+   - **Qwen2.5-Coder-1.5B-Instruct** — Evaluator (frozen)  
 
 Currently, we are running **CodeZero** on the Gensyn Testnet.  
 
