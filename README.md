@@ -2,16 +2,40 @@
 
 RL Swarm is a peer-to-peer system for reinforcement learning. It allows you to train models collaboratively with others in the swarm, leveraging their collective intelligence. It is open source and permissionless, meaning you can run it on a consumer laptop at home or on a powerful GPU in the cloud. You can also connect your model to the Gensyn Testnet to receive an on-chain identity that tracks your progress over time.
 
-Currently, we are running the [reasoning-gym](https://github.com/open-thought/reasoning-gym/tree/main) swarm on the Testnet. This swarm is designed to train models to solve a diverse set of reasoning tasks using the reasoning-gym dataset. The current list of default models includes:
+> **Update -> CodeZero Swarm Environment**  
+> RL Swarm now powers **CodeZero**, the newest active environment on the Gensyn Testnet.  
+> CodeZero extends RL Swarm beyond reasoning and math into **coding tasks**, where models take on distinct roles, *Solvers*, *Proposers*, and *Evaluators*, to enable **collaborative learning** across a decentralized network.
 
-Models:
-   - Gensyn/Qwen2.5-0.5B-Instruct
-   - Qwen/Qwen3-0.6B
-   - nvidia/AceInstruct-1.5B
-   - dnotitia/Smoothie-Qwen3-1.7B
-   - Gensyn/Qwen2.5-1.5B-Instruct
+Models (CodeZero):
+   - **Qwen2.5-Coder-0.5B-Instruct** — Solver role  
+   - **Qwen2.5-Coder-1.5B-Instruct** — Evaluator (frozen)  
+
+Currently, we are running **CodeZero** on the Gensyn Testnet.  
+
+CodeZero replaces the previous *reasoning-gym* environment, introducing a new task domain focused on programming challenges and model-based evaluation.  
+
+If you previously ran RL Swarm during the reasoning-gym phase, your node will automatically transition to CodeZero after you update using the steps below:
+
+**If you are using Docker:**
+- Simply run `git pull` and restart your swarm. Docker will handle the environment updates automatically.
+
+**If you are using the `run_rl_swarm.sh` script:**
+- You must remove your old Python virtual environment and create a fresh one after updating. Run the following commands in your RL Swarm directory:
+
+```sh
+git pull
+rm -rf .venv
+python -m venv .venv
+source .venv/bin/activate
+```
+
+This will ensure your environment is clean and compatible with CodeZero.
 
 This iteration of rl-swarm is powered by the [GenRL](https://github.com/gensyn-ai/genrl) library.  It is a fully composable framework for decentralized reinforcement learning which enables users to create and customize their own swarms for reinforcement learning with multi-agent multi-stage environments.
+
+The **CodeZero** environment runs on the same RL Swarm + GenRL stack, extending the framework to cooperative code generation and debugging tasks. 
+
+> **Note:** As of the CodeZero release, all RL Swarm nodes train on code-generation tasks rather than reasoning-gym problems. The setup process remains identical.
 
 ## Requirements
 
@@ -20,7 +44,6 @@ Your hardware requirements will vary depending on a number of factors including 
 **Supported Hardware**
 
 - arm64 or x86 CPU with a minimum of 32GB RAM (note that if you run other applications during training it might crash the training).
-
 
 OR
 
@@ -31,16 +54,41 @@ OR
     - A100
     - H100
 
-
 With either configuration, you will need Python >=3.10 (for Mac, you will likely need to upgrade).
 
-## ⚠️ Please read before continuing ⚠️
+## **Please read before continuing!**
 
 This software is **experimental** and provided as-is for users who are interested in using (or helping to develop) an early version of the Gensyn Protocol for training models.
 
 If you care about on-chain participation, you **must** read the [Identity Management](#identity-management) section below.
 
 If you encounter issues, please first check [Troubleshooting](#troubleshooting). If you cannot find a solution there, please check if there is an open (or closed) [Issue](../../issues). If there is no relevant issue, please file one and include 1) all relevant [logs](#troubleshooting), 2) information about your device (e.g. which GPU, if relevant), and 3) your operating system information.
+
+### ⚠️ CodeZero Release - Important Update Required ⚠️
+
+**Once CodeZero is released, you must update your RL Swarm installation to continue earning participation points.**
+
+With the CodeZero release, you must update your RL Swarm installation to transition to the new environment. All of your previous participation and leaderboard activity will be preserved and carried forward.
+
+Once you update, any new node you launch will automatically participate in CodeZero and continue accruing activity points for the leaderboard as before.
+
+Existing nodes running the previous "reasoning-gym" Swarm can continue operating without issue, but **will not accrue additional tracked participation points on the leaderboard after the CodeZero launch unless you update**.
+
+> Make sure to update to continue earning activity points!
+
+**To update:**
+
+- **If you are using Docker:** Simply run `git pull` and restart your swarm. 
+
+- **If you are using the `run_rl_swarm.sh` script:** You must remove your old virtual environment and create a fresh one:
+  ```sh
+  git pull
+  rm -rf .venv
+  python -m venv .venv
+  source .venv/bin/activate
+  ```
+
+Then restart your swarm.
 
 ## Instructions
 
@@ -54,13 +102,26 @@ The easiest way to run RL Swarm is using Docker. This ensures a consistent setup
 git clone https://github.com/gensyn-ai/rl-swarm
 ```
 
+**Existing RL Swarm users need to delete their old virtual environment and create a new one after pulling the latest changes:**
+
+```sh
+git pull
+rm -rf .venv
+python -m venv .venv
+source .venv/bin/activate
+```
+
 #### 2. Install Docker
 
-Make sure you have Docker installed and the Docker daemon is running on your machine. To do that, follow [these instructions](https://docs.docker.com/get-started/get-docker/) according to your OS. Ensure you allot sufficient memory to the Docker containers. For example, if you are using Docker Desktop, this can be done by going to Docker Desktop Settings > Resources > Advanced > Memory Limit, and increasing it to the maximum possible value.
+Make sure you have Docker installed and the Docker daemon is running on your machine. 
+
+To do that, follow [these instructions](https://docs.docker.com/get-started/get-docker/) according to your OS. Ensure you allot sufficient memory to the Docker containers. For example, if you are using Docker Desktop, this can be done by going to Docker Desktop Settings > Resources > Advanced > Memory Limit, and increasing it to the maximum possible value.
 
 #### 3. Start the Swarm
 
 Run the following commands from the root of the repository.
+
+> Once updated, your node will automatically participate in **CodeZero**, the active swarm environment focused on collaborative coding.
 
 ##### CPU support
 
@@ -83,12 +144,14 @@ If `docker-compose` does not work when running the above commands, please try `d
 ### Experimental (advanced) mode
 
 If you want to experiment with the [GenRL](https://github.com/gensyn-ai/genrl) library or the [configurable parameters](https://github.com/gensyn-ai/rl-swarm/blob/main/rgym_exp/config/rg-swarm.yaml ), we recommend you run RL Swarm via shell script:
+
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
 ./run_rl_swarm.sh
 ```  
 To learn more about experimental mode, check out our [getting started guide](https://github.com/gensyn-ai/genrl/blob/main/getting_started.ipynb).
+
 
 ### Login
 
@@ -120,7 +183,46 @@ From this stage onward your device will begin training. You should see your peer
 You can also track your training progress in real time:
 - On the Gensyn Testnet Dashboard: [dashboard.gensyn.ai](https://dashboard.gensyn.ai)
 
+## Environment Overview (CodeZero)
+
+CodeZero extends RL Swarm with distinct node roles that collaborate on programming challenges:
+
+| Role        | Description                                                              |
+|-------------|--------------------------------------------------------------------------|
+| **Solver**  | Learns locally on code tasks using GRPO; shares rollouts with peers      |
+| **Proposer**| Generates coding problems and adjusts difficulty heuristically           |
+| **Evaluator**| Frozen model predicting correctness and assigning rewards               |
+
+Users will run **Solver** nodes.
+
+### Updating RL Swarm
+
+**If you are using Docker:**
+- Simply run `git pull` and restart your swarm. You may also need to rebuild your containers:
+  ```sh
+  git pull
+  docker-compose build
+  ```
+
+**If you are using the `run_rl_swarm.sh` script:**
+- You must remove your old virtual environment and create a new one:
+  ```sh
+  git pull
+  rm -rf .venv
+  python -m venv .venv
+  source .venv/bin/activate
+  ```
+
+After pulling the latest changes, restart your swarm following the [instructions above](#run-the-swarm). This ensures you have the latest features, bug fixes, and compatibility updates.
+
+**Note**: If you're using Docker, you may need to rebuild your containers after updating:
+```sh
+docker-compose build
+```
+
 ## Identity management
+
+> CodeZero uses the same identity and peer registration system as previous RL Swarm environments. No new setup is required.
 
 ### Introduction
 
@@ -208,3 +310,10 @@ Therefore, you should do these actions in the following scenarios
     - Make sure you answered `Y` to the AI Prediction Market prompt (see [above](#ai-prediction-market)).
     - Log in to the [Gensyn Testnet Dashboard](https://dashboard.gensyn.ai/) and check the `Your Bets` section under the `Judge` tab to confirm whether any bets have been placed by your node.
     - Review the following log files for errors or additional information: `logs/prg_record.txt` and `logs/swarm_launcher.log`.
+
+---
+
+### Learn More
+
+- [Dashboard](https://dashboard.gensyn.ai/)
+- [Docs](https://docs.gensyn.ai/testnet/rl-swarm)
