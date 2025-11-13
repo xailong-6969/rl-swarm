@@ -127,7 +127,7 @@ class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
             my_signal = signal_by_agent[self.peer_id]
         else:
             my_signal = 0
-        my_signal = (my_signal + 1) * (my_signal > 0) + my_signal * (my_signal <= 0)
+        my_signal = (my_signal + 1) * (my_signal > 0) + 0 * (my_signal <= 0)
         return my_signal
 
     def _try_submit_to_chain(self, signal_by_agent):
